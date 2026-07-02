@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>交通事故数据可视化</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts-wordcloud@2.1.0/dist/echarts-wordcloud.min.js"></script>
+    <script src="https://geo.datav.aliyun.com/areas_v3/bound/100000_full.js"></script>
+    <style>
+        body { font-family: "Microsoft YaHei", sans-serif; margin: 20px; background: #f0f2f5; }
+        .title { text-align: center; font-size: 28px; font-weight: bold; margin-bottom: 30px; }
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; max-width: 1400px; margin: 0 auto; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); padding: 15px; }
+        .chart { width: 100%; height: 400px; }
+    </style>
+</head>
+<body>
+<div class="title">交通事故数据可视化</div>
+<div class="grid">
+    <div class="card"><div id="heatmap" class="chart"></div></div>
+    <div class="card"><div id="sankey" class="chart"></div></div>
+    <div class="card"><div id="wordcloud" class="chart"></div></div>
+    <div class="card"><div id="reasonChart" class="chart"></div></div>
+    <div class="card"><div id="hourChart" class="chart"></div></div>
+    <div class="card"><div id="vehicleChart" class="chart"></div></div>
+</div>
+
+<script>
+fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json')
+    .then(r => r.json())
+    .then(geo => {
+        echarts.registerMap('china', geo);
+        return Promise.all([
+            fetch('echarts_data/heatmap_data.json').then(r => r.json()),
+            fetch('echarts_data/sankey_data.json').then(r => r.json()),
+            fetch('echarts_data/wordcloud_data.json').then(r => r.json()),
+            fetch('echarts_data/reason_hour_data.json').then(r => r.json()),
+            fetch('echarts_data/hour_data.json').then(r => r.json()),
+            fetch('echarts_data/vehicle_data.json').then(r => r.json()),
+        ]);
+    })
+    .then(([heat, sankey, wc, reasonHour, hour, vehicle]) => {
+        initHeatmap(heat);
+        initSankey(sankey);
+        initWordCloud(wc);
+        initReasonStack(reasonHour);
+        initHourLine(hour);
+        initVehicleRose(vehicle);
+    })
+    .catch(e => console.error('数据加载失败', e));
+
+function initHeatmap(data) {
+    const chart = echarts.init(document.getElementById('heatmap'));
+    chart.setOption({
+        title: { text: '事故地点热力分布', left: 'center' },
+        tooltip: { trigger: 'item', formatter: p => p.name + '<br/>案例数：' + p.value[2] },
+        geo: { map: 'china', roam: true, itemStyle: { areaColor: '#f3f3f3', borderColor: '#999' } },
+        series: [{
+            type: 'scatter', coordinateSystem: 'geo',
+            data: data,
+            symbolSize: val => Math.sqrt(val[2]) * 3,
+            itemStyle: { color: '#dd4b39' },
+            label: { show: true, formatter: '{b}', position: 'right', fontSize: 11 }
+        }]
+    });
+}
+
+function initSankey(data) {
+    const chart = echarts.init(document.getElementById('sankey'));
+    chart.setOption({
+        title: { text: '特征流向（时段→原因→车型）', left: 'center' },
+        tooltip: { trigger: 'item' },
+        series: [{
+            type: 'sankey', layout: 'none', emphasis: { focus: 'adjacency' },
+            nodeAlign: 'left',
+            data: data.nodes,
+            links: data.links,
+            lineStyle: { color: 'gradient', curveness: 0.5 },
+            label: { fontSize: 12 }
+        }]
+    });
+}
+
+function initWordCloud(data) {
+    const chart = echarts.init(document.getElementById('wordcloud'));
+    chart.setOption({
+        title: { text: '事故关键词', left: 'center' },
+        series: [{
+            type: 'wordCloud', shape: 'circle',
+            sizeRange: [14, 80], rotationRange: [-45, 45],
+            textStyle: { fontFamily: 'Microsoft YaHei', color: () => ['#FF6B6B','#4ECDC4','#45B7D1'][Math.floor(Math.random()*3)] },
+            data: data
+        }]
+    });
+}
+
+function initReasonStack(data) {
+    const chart = echarts.init(document.getElementById('reasonChart'));
+    const reasons = data.reasons;
+    const seriesData = reasons.map((reason, i) => ({
+        name: reason,
+        type: 'bar',
+        stack: 'total',
+        emphasis: { focus: 'series' },
+        data: data.data.map(row => row[i])
+    }));
+    chart.setOption({
+        title: { text: '各时段违法类型分布', left: 'center' },
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        legend: { top: 30, data: reasons },
+        xAxis: { type: 'category', data: data.periods },
+        yAxis: { type: 'value' },
+        series: seriesData,
+        color: ['#FF6B6B','#4ECDC4','#45B7D1','#96CEB4','#FFEAA7','#DDA0DD','#98D8C8']
+    });
+}
+
+function initHourLine(data) {
+    const chart = echarts.init(document.getElementById('hourChart'));
+    chart.setOption({
+        title: { text: '24小时事故分布', left: 'center' },
+        tooltip: { trigger: 'axis' },
+        xAxis: { type: 'category', data: data.map(d => d.x + '时') },
+        yAxis: { type: 'value' },
+        series: [{
+            type: 'line', data: data.map(d => d.y),
+            smooth: true, lineStyle: { color: '#4ECDC4' },
+            areaStyle: { color: 'rgba(78,205,196,0.3)' }
+        }]
+    });
+}
+
+function initVehicleRose(data) {
+    const chart = echarts.init(document.getElementById('vehicleChart'));
+    chart.setOption({
+        title: { text: '涉事车辆类型', left: 'center' },
+        tooltip: { trigger: 'item' },
+        series: [{
+            type: 'pie',
+            radius: ['30%', '70%'],
+            roseType: 'area',
+            itemStyle: { borderRadius: 8 },
+            data: data,
+            label: { formatter: '{b}\n{d}%' }
+        }]
+    });
+}
+</script>
+</body>
+</html>

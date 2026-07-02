@@ -1,0 +1,1 @@
+{"periods": ["period_夜间", "period_平峰", "period_早高峰", "period_晚高峰", "period_未知"], "reasons": ["reason_其他", "reason_分心驾驶", "reason_疲劳驾驶", "reason_超速", "reason_逆向行驶", "reason_酒驾", "reason_闯红灯"], "data": [[0, 0, 0, 0, 0, 3, 0], [426, 16, 15, 75, 18, 297, 57], [22, 0, 0, 6, 1, 23, 4], [25, 1, 3, 7, 0, 10, 9], [0, 0, 0, 0, 0, 0, 0]]}

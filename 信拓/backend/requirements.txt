@@ -1,0 +1,14 @@
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+sqlalchemy==2.0.23
+pydantic==2.5.2
+pandas==2.1.4
+jieba==0.42.1
+mlxtend==0.23.1
+apscheduler==3.10.4
+requests==2.31.0
+beautifulsoup4==4.12.2
+python-multipart==0.0.6
+# 测试依赖
+pytest==7.4.4
+httpx==0.26.0
